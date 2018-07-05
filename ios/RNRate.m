@@ -3,6 +3,14 @@
 @implementation RNRate
 RCT_EXPORT_MODULE();
 
+RCT_EXPORT_METHOD(openAppStore:(NSDictionary *)options : (RCTResponseSenderBlock) callback) {
+    NSString *AppleAppID = [RCTConvert NSString:options[@"AppleAppID"]];
+    NSString *AppleNativePrefix = [RCTConvert NSString:options[@"AppleNativePrefix"]];
+    
+    NSString *url = [NSString stringWithFormat:@"%@%@", AppleNativePrefix, AppleAppID];
+    [self openAppStoreAndRate:url];
+}
+
 RCT_EXPORT_METHOD(rate: (NSDictionary *)options : (RCTResponseSenderBlock) callback) {
     NSString *AppleAppID = [RCTConvert NSString:options[@"AppleAppID"]];
     NSString *AppleNativePrefix = [RCTConvert NSString:options[@"AppleNativePrefix"]];
@@ -23,40 +31,39 @@ RCT_EXPORT_METHOD(rate: (NSDictionary *)options : (RCTResponseSenderBlock) callb
                 float checkTime = 0.1;
                 int iterations = (int)(inAppDelay / checkTime);
                 
-                [self possiblyOpenAppStore:url :windowCount :callback :checkTime :iterations];
+                [self waitForInAppRatingModal:windowCount callback:callback checkTime:checkTime iterations:iterations];
             });
-        } else {
-            [self openAppStoreAndRate:url];
-            callback(@[[NSNumber numberWithBool:true]]);
         }
     } else {
         [self openAppStoreAndRate:url];
-        callback(@[[NSNumber numberWithBool:true]]);
+        callback(@[[NSNumber numberWithBool:YES]]);
     }
 }
 
-- (void) possiblyOpenAppStore : (NSString *) url : (NSUInteger) originalWindowCount : (RCTResponseSenderBlock) callback : (float) checkTime : (int) iterations {
+- (void)waitForInAppRatingModal:(NSUInteger)originalWindowCount callback:(RCTResponseSenderBlock)callback checkTime:(float)checkTime iterations:(int)iterations {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(checkTime * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         NSUInteger newWindowCount = [[[UIApplication sharedApplication] windows] count];
         
         if (newWindowCount > originalWindowCount) {
-            callback(@[[NSNumber numberWithBool:true]]);
+            callback(@[[NSNumber numberWithBool:YES]]);
         } else if (newWindowCount < originalWindowCount) {
-            callback(@[[NSNumber numberWithBool:false]]);
+            callback(@[[NSNumber numberWithBool:NO]]);
         } else {
             int newInterations = iterations - 1;
             if (newInterations > 0) {
-                [self possiblyOpenAppStore:url :originalWindowCount :callback :checkTime :newInterations];
+                [self waitForInAppRatingModal:originalWindowCount callback:callback checkTime:checkTime iterations:newInterations];
             } else {
-                [self openAppStoreAndRate:url];
-                callback(@[[NSNumber numberWithBool:true]]);
+                callback(@[[NSNumber numberWithBool:NO]]);
             }
         }
     });
 }
 
-- (void) openAppStoreAndRate : (NSString *) url {
-    [[UIApplication sharedApplication] openURL: [NSURL URLWithString:url]];
+- (void)openAppStoreAndRate:(NSString *)url {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:url]];
+    });
+    
 }
 
 
