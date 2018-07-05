@@ -31,13 +31,13 @@ export default class Rate {
 
 	static rate(inputOptions, callback) {
 		let options = Rate.filterOptions(inputOptions)
-		if (Platform.OS == 'ios') {
+		if (Platform.OS === 'ios') {
       options.AppleNativePrefix = AppleNativePrefix
 			const RNRate = NativeModules.RNRate
 			RNRate.rate(options, response=>{
 				callback(response) // error?
 			})
-		} else if (Platform.OS == 'android') {
+		} else if (Platform.OS === 'android') {
 			if (options.preferredAndroidMarket === AndroidMarket.Google) {
 				Rate.openURL(GooglePrefix + options.GooglePackageName, callback)
 			} else if (options.preferredAndroidMarket === AndroidMarket.Amazon) {
@@ -48,6 +48,18 @@ export default class Rate {
 		} else {
 			Rate.openURL(options.fallbackPlatformURL, callback)
 		}
+	}
+
+	static openAppStore(inputOptions, callback) {
+		if (Platform.OS !== 'ios') {
+			return // not implemented
+		}
+		let options = Rate.filterOptions(inputOptions)
+		options.AppleNativePrefix = AppleNativePrefix
+		const RNRate = NativeModules.RNRate
+		RNRate.openAppStore(options, response=>{
+			callback(response) // error?
+		})
 	}
 
 	static openURL(url, callback) {
